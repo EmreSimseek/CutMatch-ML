@@ -1,10 +1,10 @@
-
 from utils.file_loader import load_data, FileLoader
 from glass_cut_analysis import GlassCutAnalysis
 from shape_analyzer import  ShaperAnalysis
 from model_train import  ModelTrainer
 import  os
 import pandas as pd
+
 def main():
     # Veri dosyasını file_loader ile yüklüyoruz
     file_loader = FileLoader()
@@ -32,16 +32,15 @@ def main():
         # Öklid mesafelerini hesaplıyoruz
         distances = glass_analysis.calculate_euclidean_distances()
 
-
         if distances:  # Mesafe listesi boş değilse
             mean_distance, std_distance = glass_analysis.calculate_statistics()
             print(f"\n{file_name} için Ortalama Öklid Mesafesi: {mean_distance:.2f}")
             print(f"{file_name} için Standart Sapma: {std_distance:.2f}")
         else:
             mean_distance, std_distance = None, None  # Mesafe hesaplanmadıysa None atayın
+
         same_series_value = glass_analysis.label_same_series()
         print(f"Same Series Değeri: {same_series_value}")
-
 
         # Çizim ve IoU değerine göre seri tespiti
         output_path = "results"
@@ -50,6 +49,7 @@ def main():
 
         # açı analizleri
         angle_analysis = glass_analysis.analyze_angle_similarity()
+        
         # Sonuçları listeye ekle
         if shaper_result:
             results.append({
