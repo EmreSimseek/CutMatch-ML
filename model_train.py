@@ -99,13 +99,13 @@ class ModelTrainer:
         cm_output_path = os.path.join(self.output_dir, 'confusion_matrix.png')
         plt.savefig(cm_output_path, bbox_inches='tight')  # Kaydetme işlemi
         print(f"Confusion Matrix kaydedildi: {cm_output_path}")
-
-
-          # Boş sayfa sorunu için grafiği kapat
+        plt.close()
 
         # Classification Report
         print("\nClassification Report:")
         print(classification_report(y_test, y_pred))
+
+
 
         return accuracy
 
@@ -131,9 +131,9 @@ class ModelTrainer:
         fi_output_path = os.path.join(self.output_dir, 'feature_importances.png')
         plt.savefig(fi_output_path, bbox_inches='tight')  # Kaydetme işlemi
         print(f"Feature Importances görseli kaydedildi: {fi_output_path}")
+        plt.close()
 
 
-         # Boş sayfa sorunu için grafiği kapat
 
     def run_training(self, data):
         """
