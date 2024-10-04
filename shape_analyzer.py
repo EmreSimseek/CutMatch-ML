@@ -82,5 +82,6 @@ class ShaperAnalysis:
         # Grafiği belirtilen dosya yoluna kaydet
         plt.savefig(output_dir, bbox_inches='tight')  # Kaydetme işlemi
         print(f"Poligon grafiği kaydedildi: {self.output_path}")
+        plt.close()
 
 
