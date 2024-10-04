@@ -1,87 +1,86 @@
 from shapely.geometry import Polygon
 import matplotlib.pyplot as plt
-from utils.file_loader import load_data
 import os
 
-# Dosya yolları
-file_paths = [
-    'data/veriler-aynı-1.csv',
-    'data/veriler-aynı-2.csv',
-    'data/veriler-aynı-3.csv',
-    'data/veriler-aynı-4.csv',
-    'data/veriler-aynı-5.csv',
-    'data/veriler-aynı-6.csv',
-    'data/veriler-farklı-1.csv',
-    'data/veriler-farklı-2.csv',
-    'data/veriler-farklı-3.csv',
-    'data/veriler-farklı-4.csv',
-    'data/veriler-farklı-5.csv'
-]
+class ShaperAnalysis:
+    def __init__(self, prev_points, curr_points, file_name, output_path):
+        """Nokta verilerini alır ve analizi yapar."""
+        self.prev_points = prev_points
+        self.curr_points = curr_points
+        self.file_name = file_name
+        self.output_path = output_path
+    def analyze_data(self):
 
-for file_path in file_paths:
-    file_name = os.path.basename(file_path)
-    print(f"\nİşleniyor: {file_name}")
+        # Nokta sayısını kontrol et
+        if len(self.prev_points) < 3 or len(self.curr_points) < 3:
+            print(f"{self.file_name} dosyasında geçerli nokta yok. Atlanıyor.")
+            return None  # En az 3 nokta olması gerekir
 
-    if not os.path.exists(file_path):
-        print(f"{file_name} bulunamadı.")
-        continue  # Eğer dosya yoksa bir sonraki döngüye geç
+        # Poligonları oluşturma
+        prev_polygon = Polygon(self.prev_points)
+        curr_polygon = Polygon(self.curr_points)
 
-    # Veriyi yükle
-    prev_noktalar, curr_noktalar = load_data(file_path)
+        # Poligonların geçerliliğini kontrol et ve düzelt
+        if not prev_polygon.is_valid:
+            print(f"{self.file_name} dosyasındaki eski kesim poligonu geçersiz. Düzeltme yapılıyor.")
+            prev_polygon = prev_polygon.buffer(0)  # Küçük topolojik hataları düzeltir
+        if not curr_polygon.is_valid:
+            print(f"{self.file_name} dosyasındaki yeni kesim poligonu geçersiz. Düzeltme yapılıyor.")
+            curr_polygon = curr_polygon.buffer(0)
 
-    # Nokta sayısını kontrol et
-    if len(prev_noktalar) < 3 or len(curr_noktalar) < 3:
-        print(f"{file_name} dosyasında geçerli nokta yok. Atlanıyor.")
-        continue  # En az 3 nokta olması gerekir
+        # Poligonların geçerliliğini kontrol et
+        if not prev_polygon.is_valid or not curr_polygon.is_valid:
+            print(f"{self.file_name} dosyasındaki poligonlar geçersiz. Atlanıyor.")
+            return None
 
-    # Poligonları oluşturma
-    prev_polygon = Polygon(prev_noktalar)
-    curr_polygon = Polygon(curr_noktalar)
+        # Poligonları çizme
+        self.plot_polygons()
 
-    # Poligonların geçerliliğini kontrol et ve geçersizse düzelt
-    if not prev_polygon.is_valid:
-        print(f"{file_name} dosyasındaki eski kesim poligonu geçersiz. Düzeltme yapılıyor.")
-        prev_polygon = prev_polygon.buffer(0)  # Küçük topolojik hataları düzeltir
-    if not curr_polygon.is_valid:
-        print(f"{file_name} dosyasındaki yeni kesim poligonu geçersiz. Düzeltme yapılıyor.")
-        curr_polygon = curr_polygon.buffer(0)
+        # Kesişim ve birleşim alanlarını hesaplama
+        intersection_area = prev_polygon.intersection(curr_polygon).area
+        union_area = prev_polygon.union(curr_polygon).area
 
-    # Poligonların geçerliliğini kontrol et
-    if not prev_polygon.is_valid or not curr_polygon.is_valid:
-        print(f"{file_name} dosyasındaki poligonlar geçersiz. Atlanıyor.")
-        continue
+        # IoU'yu hesaplama
+        iou = intersection_area / union_area if union_area > 0 else 0
 
-    # Poligonları çizme
-    x_prev, y_prev = zip(*prev_noktalar)
-    x_curr, y_curr = zip(*curr_noktalar)
+        # IoU'ya göre karar verme
+        esik_degeri = 0.9
+        series_label = "Aynı seri" if iou > esik_degeri else "Farklı seri"
 
-    plt.figure()
-    plt.fill(x_prev, y_prev, alpha=0.5, label='Eski Kesim', color='blue')
-    plt.fill(x_curr, y_curr, alpha=0.5, label='Yeni Kesim', color='orange')
-    plt.plot(x_prev, y_prev, color='blue')
-    plt.plot(x_curr, y_curr, color='orange')
-    plt.legend()
-    plt.title(f"{file_name}")
-    plt.xlabel("X Koordinatları")
-    plt.ylabel("Y Koordinatları")
-    plt.grid(True)
-    plt.show()
+        # Hesaplanan alanları yazdırma
+        print(f"Kesişim Alanı: {intersection_area:.2f}")
+        print(f"Birleşim Alanı: {union_area:.2f}")
+        print(f"IoU: {iou:.2f}")
+        print(f"Seri Durumu: {series_label}")
 
-    # Kesişim ve birleşim alanlarını hesaplama
-    intersection_area = prev_polygon.intersection(curr_polygon).area
-    union_area = prev_polygon.union(curr_polygon).area
+        return {
+            "file_name": self.file_name,
+            "intersection_area": intersection_area,
+            "union_area": union_area,
+            "iou": iou,
+            "series_label": series_label,
+        }
 
-    # IoU'yu hesaplama
-    iou = intersection_area / union_area if union_area > 0 else 0
+    def plot_polygons(self):
+        """Poligonları çizen fonksiyon."""
+        x_prev, y_prev = zip(*self.prev_points)
+        x_curr, y_curr = zip(*self.curr_points)
 
-    # IoU'ya göre karar verme
-    esik_degeri = 0.9
-    if iou > esik_degeri:
-        print("Aynı seri")
-    else:
-        print("Farklı seri")
+        plt.figure()
+        plt.fill(x_prev, y_prev, alpha=0.5, label='Eski Kesim', color='blue')
+        plt.fill(x_curr, y_curr, alpha=0.5, label='Yeni Kesim', color='orange')
+        plt.plot(x_prev, y_prev, color='blue')
+        plt.plot(x_curr, y_curr, color='orange')
+        plt.legend()
+        plt.title(f"{self.file_name}")
+        plt.xlabel("X Koordinatları")
+        plt.ylabel("Y Koordinatları")
+        plt.grid(True)
 
-    # Hesaplanan alanları yazdırma
-    print(f"Kesişim Alanı: {intersection_area:.2f}")
-    print(f"Birleşim Alanı: {union_area:.2f}")
-    print(f"IoU: {iou:.2f}")
+        file_base_name = os.path.splitext(self.file_name)[0]
+        output_dir = os.path.join(self.output_path, f"{file_base_name}_plot.png")  # Yeni dosya adı
+        # Grafiği belirtilen dosya yoluna kaydet
+        plt.savefig(output_dir, bbox_inches='tight')  # Kaydetme işlemi
+        print(f"Poligon grafiği kaydedildi: {self.output_path}")
+
+
