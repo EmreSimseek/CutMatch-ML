@@ -1,30 +1,19 @@
-from pyflakes.checker import counter
-from statsmodels.graphics.tukeyplot import results
-import numpy as np
-from utils.file_loader import load_data
-from glass_cut_analysis import GlassCutAnalysis
-from overlap_analysis import OverlapAnalysis
-import  os
 
+from utils.file_loader import load_data, FileLoader
+from glass_cut_analysis import GlassCutAnalysis
+from shape_analyzer import  ShaperAnalysis
+from model_train import  ModelTrainer
+import  os
+import pandas as pd
 def main():
-    # Veri dosyasının yolunu belirtiyoruz
-    file_paths = [
-        'data/veriler-aynı-1.csv',
-        'data/veriler-aynı-2.csv',
-        'data/veriler-aynı-3.csv',
-        'data/veriler-aynı-4.csv',
-        'data/veriler-aynı-5.csv',
-        'data/veriler-aynı-6.csv',
-        'data/veriler-farklı-1.csv',
-        'data/veriler-farklı-2.csv',
-        'data/veriler-farklı-3.csv',
-        'data/veriler-farklı-4.csv',
-        'data/veriler-farklı-5.csv'
-    ]
-    results = []  # Sonuçları saklayacağımız liste
+    # Veri dosyasını file_loader ile yüklüyoruz
+    file_loader = FileLoader()
+    file_paths = file_loader.get_file_paths()
+    results = []
 
     for file_path in file_paths:
 
+        # Veriyi yüklüyoruz
         file_name = os.path.basename(file_path)
         print(f"\nİşleniyor: {file_name}")
 
@@ -32,79 +21,68 @@ def main():
             pass
         else:
             print(f"{file_name} bulunamadı.")
-        #file_path = 'data/veriler-aynı-3.csv'  # ya da xlsx dosyanız
-
-        # Veriyi yüklüyoruz
+        # 2 farklı cam için koordinat değerlerini ayırıyoruz
         prev_points, curr_points = load_data(file_path)
 
         # Analiz sınıfını oluşturuyoruz
-        glass_analysis = GlassCutAnalysis(prev_points, curr_points)
+        glass_analysis = GlassCutAnalysis(prev_points, curr_points,file_name)
 
-        # Verileri gösteriyoruz
-        glass_analysis.show_data()
+        # Verileri gösteriyoruz - glass_analysis.show_data()
 
         # Öklid mesafelerini hesaplıyoruz
         distances = glass_analysis.calculate_euclidean_distances()
-        #print("\nÖklid Mesafeleri:")
-        #for i, dist in enumerate(distances):
-            #print(f"Nokta {i + 1}: Öklid Mesafesi = {dist:.2f}")
+
 
         if distances:  # Mesafe listesi boş değilse
-            mean_distance = np.mean(distances)
-            std_distance = np.std(distances)
+            mean_distance, std_distance = glass_analysis.calculate_statistics()
             print(f"\n{file_name} için Ortalama Öklid Mesafesi: {mean_distance:.2f}")
             print(f"{file_name} için Standart Sapma: {std_distance:.2f}")
-
-        # Serilerin aynı olup olmadığını kontrol ediyoruz
-        same_series = glass_analysis.compare_series(threshold=61.0)
-        if same_series:
-            print(f"\n{file_name} dosyası için cam kesimleri aynı seride!")
         else:
-            print(f"\n{file_name} dosyası için cam kesimleri farklı seride!")
+            mean_distance, std_distance = None, None  # Mesafe hesaplanmadıysa None atayın
+        same_series_value = glass_analysis.label_same_series()
+        print(f"Same Series Değeri: {same_series_value}")
 
-        # Örtüşme analizi yapıyoruz
-        overlap_analysis = OverlapAnalysis(prev_points, curr_points)
-        overlaps = overlap_analysis.calculate_overlap(threshold=5.0)
 
-        if "aynı" in file_path:
-          expected_same = True
-        elif "farklı" in file_path:
-          expected_same = False
-        else:
-           print(f"{file_name} dosyası için beklenmeyen bir isim formatı.")
-           continue  # Devam e1tmek için döngünün başına döner
+        # Çizim ve IoU değerine göre seri tespiti
+        output_path = "results"
+        shaper_analysis = ShaperAnalysis(prev_points, curr_points, file_name, output_path)
+        shaper_result = shaper_analysis.analyze_data()
 
-        results.append({
-            "file_name": file_name,
-            "same_series": same_series,
-            "overlaps": overlaps
-        })
+        # açı analizleri
+        angle_analysis = glass_analysis.analyze_angle_similarity()
+        # Sonuçları listeye ekle
+        if shaper_result:
+            results.append({
+                "file_name": file_name,
+                "mean_distance": f"{mean_distance:.3f}" if mean_distance is not None else None,
+                "std_distance": f"{std_distance:.3f}" if std_distance is not None else None,
+                "intersection_area": f"{shaper_result['intersection_area']:.3f}",
+                "union_area": f"{shaper_result['union_area']:.3f}",
+                "iou": f"{shaper_result['iou']:.3f}",
+                "angle_std_prev": f"{angle_analysis['std_prev']:.3f}",
+                "angle_mean_curr": f"{angle_analysis['mean_curr']:.3f}",
+                "angle_std_curr": f"{angle_analysis['std_curr']:.3f}",
+                "angle_mse": f"{angle_analysis['mse']:.3f}",
+                "similarity_score": f"{angle_analysis['similarity_score']:.3f}",
+                "same_series_value": same_series_value
+            })
 
-    print("\nSonuçlar:")
-    for result in results:
-        file_name = result["file_name"]
-        same_series = result["same_series"]
-        overlaps = result["overlaps"]
+    # Sonuçları bir DataFrame'e dönüştür
+    results_df = pd.DataFrame(results)
 
-        # Serinin aynı olup olmadığını kontrol et
-        if same_series:
-            series_message = f"{file_name} dosyası için cam kesimleri aynı seride."
-        else:
-            series_message = f"{file_name} dosyası için cam kesimleri farklı seride."
+    # DataFrame'i bir CSV dosyasına kaydet
+    output_file = "data/analysis_results.csv"
+    results_df.to_csv(output_file, index=False, encoding='utf-8-sig')
+    print(f"\nSonuçlar {output_file} dosyasına kaydedildi.")
 
-        # Örtüşmeleri kontrol et
-        if overlaps:
-            overlap_count = len(overlaps)  # Örtüşen noktaların sayısını hesapla
-            overlap_message = f"{file_name} dosyasında {overlap_count} örtüşen noktalar bulundu:"
+    # Model eğitim ve test aşaması
+    trainer = ModelTrainer(output_dir="results")  # Yeni eğitim sınıfı
+    analysis_data = pd.read_csv(output_file)
+    trainer.run_training(analysis_data)  # CSV'den yüklenen verilerle eğitimi başlat
 
-            for p1, p2 in overlaps:
-                overlap_message += f"\n  Prev: {p1}, Curr: {p2}"
+    X, y = trainer.preprocess_data(analysis_data)  # Veriyi işle
+    trainer.cross_validate(X, y, cv=5)  # Çapraz doğrulamayı çalıştır
 
-        else:
-            overlap_message = f"{file_name} dosyasında örtüşme yok."
-
-        # Sonuçları birleştir ve yazdır
-        print(f"\n{series_message}\n{overlap_message}")
 
 if __name__ == "__main__":
     main()
