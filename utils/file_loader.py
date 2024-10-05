@@ -1,6 +1,6 @@
 import pandas as pd
 import os
-import numpy as np
+
 
 class FileLoader:
      def __init__(self):
