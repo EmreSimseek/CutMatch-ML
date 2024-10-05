@@ -49,7 +49,7 @@ def main():
 
         # açı analizleri
         angle_analysis = glass_analysis.analyze_angle_similarity()
-        
+
         # Sonuçları listeye ekle
         if shaper_result:
             results.append({
