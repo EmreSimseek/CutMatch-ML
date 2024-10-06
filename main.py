@@ -2,40 +2,46 @@ from utils.file_loader import load_data, FileLoader
 from glass_cut_analysis import GlassCutAnalysis
 from shape_analyzer import  ShaperAnalysis
 from model_train import  ModelTrainer
+from results_manager import  ResultsManager
+import  time
 import  os
 import pandas as pd
 
+
 def main():
+    start_time = time.time()  # Başlangıç zamanını kaydet
+
     # Veri dosyasını file_loader ile yüklüyoruz
-    file_loader = FileLoader()
-    file_paths = file_loader.get_file_paths()
-    results = []
+    directory = 'data/'  # Klasör yolunu buraya gir
+    file_loader = FileLoader(directory) #klasördeki dosyaları bulmak ve daha sonra işlem yapmak için kullanılıyor.
+    file_paths = file_loader.get_file_paths() #data/veriler-aynı-1.csv şeklinde dataset listesini tutar   fonksiyon dosya yollarını return eder
 
+
+    results_manager = ResultsManager() # Sonuçları yönetecek ResultsManager sınıfını başlatıyoruz
+
+    # Her dosya için analiz işlemlerini gerçekleştiriyoruz
     for file_path in file_paths:
-
         # Veriyi yüklüyoruz
-        file_name = os.path.basename(file_path)
+        file_name = os.path.basename(file_path) # Dosya adı
         print(f"\nİşleniyor: {file_name}")
 
         if os.path.exists(file_path):
-            pass
+            try:
+                print(f"{file_name} dosyası yükleniyor...")
+                prev_points, curr_points = load_data(file_path)  #noktalar ayrıştırılır ve liste şeklind elde edilir
+                print(f"{file_name} dosyası yüklendi. Toplam {len(prev_points)} previous nokta ve {len(curr_points)} current nokta bulundu.")
+            except Exception as e:
+                print(f"Veri yüklenirken hata oluştu: {e}")
+                continue  # Hata oluşursa bu dosyayı atla
         else:
             print(f"{file_name} bulunamadı.")
-        # 2 farklı cam için koordinat değerlerini ayırıyoruz
-        prev_points, curr_points = load_data(file_path)
+            continue
 
-        # Analiz sınıfını oluşturuyoruz
-        glass_analysis = GlassCutAnalysis(prev_points, curr_points,file_name)
-
-        # Verileri gösteriyoruz - glass_analysis.show_data()
-
-        # Öklid mesafelerini hesaplıyoruz
-        distances = glass_analysis.calculate_euclidean_distances()
+        glass_analysis = GlassCutAnalysis(prev_points, curr_points,file_name) # Analiz sınıfını oluşturuyoruz
+        distances = glass_analysis.calculate_euclidean_distances() # Öklid mesafelerini hesaplıyoruz
 
         if distances:  # Mesafe listesi boş değilse
             mean_distance, std_distance = glass_analysis.calculate_statistics()
-            print(f"\n{file_name} için Ortalama Öklid Mesafesi: {mean_distance:.2f}")
-            print(f"{file_name} için Standart Sapma: {std_distance:.2f}")
         else:
             mean_distance, std_distance = None, None  # Mesafe hesaplanmadıysa None atayın
 
@@ -43,45 +49,47 @@ def main():
         print(f"Same Series Değeri: {same_series_value}")
 
         # Çizim ve IoU değerine göre seri tespiti
-        output_path = "results"
+        output_path = "results/visualizations/plots"
         shaper_analysis = ShaperAnalysis(prev_points, curr_points, file_name, output_path)
         shaper_result = shaper_analysis.analyze_data()
 
         # açı analizleri
         angle_analysis = glass_analysis.analyze_angle_similarity()
+        # Tüm sonuçlar listeye toplanıyor
+        results_manager.add_result(file_name, mean_distance, std_distance, shaper_result, angle_analysis,same_series_value)
+        elapsed_time = time.time() - start_time  # Geçen süreyi hesapla
+        print(f"{file_name} dosyasının işlenmesi {elapsed_time:.2f} saniye sürdü.")
 
-        # Sonuçları listeye ekle
-        if shaper_result:
-            results.append({
-                "file_name": file_name,
-                "mean_distance": f"{mean_distance:.3f}" if mean_distance is not None else None,
-                "std_distance": f"{std_distance:.3f}" if std_distance is not None else None,
-                "intersection_area": f"{shaper_result['intersection_area']:.3f}",
-                "union_area": f"{shaper_result['union_area']:.3f}",
-                "iou": f"{shaper_result['iou']:.3f}",
-                "angle_std_prev": f"{angle_analysis['std_prev']:.3f}",
-                "angle_mean_curr": f"{angle_analysis['mean_curr']:.3f}",
-                "angle_std_curr": f"{angle_analysis['std_curr']:.3f}",
-                "angle_mse": f"{angle_analysis['mse']:.3f}",
-                "similarity_score": f"{angle_analysis['similarity_score']:.3f}",
-                "same_series_value": same_series_value
-            })
 
-    # Sonuçları bir DataFrame'e dönüştür
-    results_df = pd.DataFrame(results)
-
-    # DataFrame'i bir CSV dosyasına kaydet
-    output_file = "data/analysis_results.csv"
-    results_df.to_csv(output_file, index=False, encoding='utf-8-sig')
+    output_file = "results/analysis/output_analysis.csv"  # Dataset üzerinden özellik çıkarımı yapılan csv dosyası
+    results_manager.save_results_to_csv(output_file)
     print(f"\nSonuçlar {output_file} dosyasına kaydedildi.")
 
-    # Model eğitim ve test aşaması
-    trainer = ModelTrainer(output_dir="results")  # Yeni eğitim sınıfı
+    # 1.Model eğitim ve test aşaması
+    trainer = ModelTrainer(output_dir="results/visualizations/model")  # Yeni eğitim sınıfı
     analysis_data = pd.read_csv(output_file)
     trainer.run_training(analysis_data)  # CSV'den yüklenen verilerle eğitimi başlat
 
     X, y = trainer.preprocess_data(analysis_data)  # Veriyi işle
     trainer.cross_validate(X, y, cv=5)  # Çapraz doğrulamayı çalıştır
+
+    # 2.Model eğitim ve test aşaması
+    # Hazır bir analiz CSV dosyasını yükleyin
+
+    analysis_data2 = pd.read_csv('data/generated_100_variations.csv')  # Gpt ile oluşturulmuş veriler
+    trainer = ModelTrainer(output_dir="results/visualizations/model")
+    X, y = trainer.preprocess_data(analysis_data2)  # Veriyi eğitime hazırlayın
+    trainer.run_training(analysis_data2) # Eğitim ve değerlendirme işlemlerini başlat
+
+
+    # Çapraz doğrulama yaparak modelin performansını daha detaylı inceleyin
+    trainer.cross_validate(X, y, cv=5)  # 5 katlı çapraz doğrulama
+    print("Model eğitimi ve değerlendirme tamamlandı.")
+
+
+    end_time = time.time()  # Bitiş zamanını al
+    total_time = end_time - start_time  # Toplam süreyi hesapla
+    print(f"Toplam çalışma süresi: {total_time:.2f} saniye")
 
 
 if __name__ == "__main__":
