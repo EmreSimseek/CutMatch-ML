@@ -8,7 +8,7 @@ from sklearn.metrics import accuracy_score, confusion_matrix, classification_rep
 from sklearn.model_selection import GridSearchCV
 
 class ModelTrainer:
-    def __init__(self, output_dir='results'):
+    def __init__(self, output_dir):
         """
         ModelTrainer sınıfı, model eğitim ve değerlendirme işlemleri için kullanılır.
         Çıktı görsellerinin kaydedileceği klasörün adı da parametre olarak alınır.
@@ -72,7 +72,7 @@ class ModelTrainer:
         RandomForest modelini eğitir.
         """
         if not self.model:
-            self.model = RandomForestClassifier(n_estimators=100, random_state=42)
+            self.model = RandomForestClassifier(n_estimators=10, random_state=42)
 
         self.model.fit(X_train, y_train)
         print("Model eğitimi tamamlandı.")
@@ -127,13 +127,11 @@ class ModelTrainer:
         plt.title('Feature Importances')
         plt.xticks(rotation=45, ha='right')  # X-tiklerini döndür
 
-        # Feature Importances'ı results klasörüne kaydet
+        # Feature Importances'ı kaydet
         fi_output_path = os.path.join(self.output_dir, 'feature_importances.png')
         plt.savefig(fi_output_path, bbox_inches='tight')  # Kaydetme işlemi
         print(f"Feature Importances görseli kaydedildi: {fi_output_path}")
         plt.close()
-
-
 
     def run_training(self, data):
         """
