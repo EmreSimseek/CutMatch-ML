@@ -46,27 +46,23 @@ def main():
             mean_distance, std_distance = None, None  # Mesafe hesaplanmadıysa None atayın
 
         same_series_value = glass_analysis.label_same_series()
-        print(f"Same Series Değeri: {same_series_value}")
 
         # Çizim ve IoU değerine göre seri tespiti
         output_path = "results/visualizations/plots"
         shaper_analysis = ShaperAnalysis(prev_points, curr_points, file_name, output_path)
-        shaper_result = shaper_analysis.analyze_data()
+        shaper_result = shaper_analysis.analyze_data() #  intersection_area, union_area, iou, series_label,
 
         # açı analizleri
-        angle_analysis = glass_analysis.analyze_angle_similarity()
+        angle_analysis = glass_analysis.analyze_angle_similarity() # mean_prev,std_prev, mean_curr, std_curr,  mse, similarity_score
         # Tüm sonuçlar listeye toplanıyor
         results_manager.add_result(file_name, mean_distance, std_distance, shaper_result, angle_analysis,same_series_value)
-        elapsed_time = time.time() - start_time  # Geçen süreyi hesapla
-        print(f"{file_name} dosyasının işlenmesi {elapsed_time:.2f} saniye sürdü.")
-
 
     output_file = "results/analysis/output_analysis.csv"  # Dataset üzerinden özellik çıkarımı yapılan csv dosyası
     results_manager.save_results_to_csv(output_file)
     print(f"\nSonuçlar {output_file} dosyasına kaydedildi.")
 
     # 1.Model eğitim ve test aşaması
-    trainer = ModelTrainer(output_dir="results/visualizations/model")  # Yeni eğitim sınıfı
+    trainer = ModelTrainer(output_dir="results/visualizations/model",model_choice="svm")  # Yeni eğitim sınıfı
     analysis_data = pd.read_csv(output_file)
     trainer.run_training(analysis_data)  # CSV'den yüklenen verilerle eğitimi başlat
 
@@ -77,7 +73,7 @@ def main():
     # Hazır bir analiz CSV dosyasını yükleyin
 
     analysis_data2 = pd.read_csv('data/generated_100_variations.csv')  # Gpt ile oluşturulmuş veriler
-    trainer = ModelTrainer(output_dir="results/visualizations/model")
+    trainer = ModelTrainer(output_dir="results/visualizations/model",model_choice="random_forest")
     X, y = trainer.preprocess_data(analysis_data2)  # Veriyi eğitime hazırlayın
     trainer.run_training(analysis_data2) # Eğitim ve değerlendirme işlemlerini başlat
 
@@ -91,6 +87,22 @@ def main():
     total_time = end_time - start_time  # Toplam süreyi hesapla
     print(f"Toplam çalışma süresi: {total_time:.2f} saniye")
 
+    new_data_input = 'results/analysis/output_analysis2.csv'  # Yeni verilerin yer aldığı CSV dosyasının yolu
+
+    # Yeni verileri CSV dosyasından oku
+    try:
+        new_data = pd.read_csv(new_data_input, header=None)  # Başlık olmadan veri yükle
+        print(f"{new_data_input} dosyası başarıyla yüklendi.")
+    except Exception as e:
+        print(f"Yeni veriler yüklenirken hata oluştu: {e}")
+        return  # Hata oluşursa işlemi durdur
+
+    # Tahmin yap
+    predictions = trainer.predict(new_data)
+
+    # Tahmin sonuçlarını yazdır
+    print("Tahmin Sonuçları:", end="")
+    print(predictions)
 
 if __name__ == "__main__":
     main()
