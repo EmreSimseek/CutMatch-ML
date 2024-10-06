@@ -1,6 +1,6 @@
 from scipy.spatial.distance import euclidean
 import numpy as np
-import os
+
 class GlassCutAnalysis:
     def __init__(self, prev_points, curr_points,file_name):
         """Veri noktalarını alır ve analizi yapar."""
@@ -90,11 +90,7 @@ class GlassCutAnalysis:
 
         # MSE ve benzerlik skorunu hesapla
         mse = np.mean((np.array(prev_angles) - np.array(curr_angles)) ** 2)
-        similarity_score = 100 / (1 + mse)  # Benzerlik skoru (0 ile 1 arasında)
-
-        print(f"Prev Açı Ortalaması: {mean_prev:.2f}, Standart Sapma: {std_prev:.2f}")
-        print(f"Curr Açı Ortalaması: {mean_curr:.2f}, Standart Sapma: {std_curr:.2f}")
-        print(f"MSE: {mse:.2f}, Benzerlik Skoru: {similarity_score:.2f}")
+        similarity_score = 100 / (1 + mse)
 
         return {
             "mean_prev": mean_prev,
