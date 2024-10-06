@@ -47,12 +47,6 @@ class ShaperAnalysis:
         esik_degeri = 0.9
         series_label = "Aynı seri" if iou > esik_degeri else "Farklı seri"
 
-        # Hesaplanan alanları yazdırma
-        print(f"Kesişim Alanı: {intersection_area:.2f}")
-        print(f"Birleşim Alanı: {union_area:.2f}")
-        print(f"IoU: {iou:.2f}")
-        print(f"Seri Durumu: {series_label}")
-
         return {
             "file_name": self.file_name,
             "intersection_area": intersection_area,
