@@ -7,7 +7,10 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 from sklearn.model_selection import GridSearchCV
 from sklearn.svm import SVC
-
+from glass_cut_analysis import  GlassCutAnalysis
+from shape_analyzer import  ShaperAnalysis
+import  numpy as np
+from  utils.file_loader import  load_data
 
 
 class ModelTrainer:
@@ -19,6 +22,7 @@ class ModelTrainer:
         self.model = None  # Model örneği
         self.output_dir = output_dir  # Çıktıların kaydedileceği dizin
         self.model_choice = model_choice
+        self.results = []  # Tahmin sonuçlarını saklamak için liste
         # results dizini var mı, kontrol et yoksa oluştur
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
@@ -47,6 +51,8 @@ class ModelTrainer:
         X = data[feature_columns].astype(float)
 
         return X, y
+
+
 
     @staticmethod
     def split_data(X, y, test_size=0.2, random_state=42):
@@ -216,33 +222,29 @@ class ModelTrainer:
         print(f"\n{cv}-Fold Cross Validation Accuracy Scores: {scores}")
         print(f"Ortalama Doğruluk: {scores.mean():.2f}")
 
-    def predict(self, new_data):
+    def predict(self, features_list):
         """
-        Yeni verilerle tahmin yapar.
-        :param new_data: Tahmin yapılacak yeni veriler (DataFrame formatında).
+        Yeni verilerle tahmin yapar ve sonuçları CSV dosyasına kaydeder.
+        :param features_list: Tahmin yapılacak özelliklerin listesi (list formatında).
         :return: Tahmin sonuçları
         """
-        # 'file_name' sütununu kaldırın
-        if 'file_name' in new_data.columns:
-            new_data = new_data.drop(columns=['file_name'])
+        for features in features_list:
+            # Özellikleri numpy dizisine çevir ve model için uygun şekle getir
+            features_array = np.array(features).reshape(1, -1)
 
-        # Yeni veriyi sayısal formata çevir
-        try:
-            X_new = new_data.astype(float)  # Sayısal formata dönüştür
-        except ValueError as e:
-            raise ValueError("Yeni veriler sayısal formata dönüştürülemedi: " + str(e))
+            # Tahmin yapma
+            predictions = self.model.predict(features_array)
 
-        # Boş DataFrame kontrolü
-        if X_new.empty:
-            raise ValueError("Yeni veriler boş, tahmin yapılamaz.")
+            # Sonuçları sakla
+            self.results.append(predictions[0])  # predictions[0] çünkü tek bir tahmin alıyoruz
 
-        # Sütun sayısını kontrol et
-        if X_new.shape[1] != self.model.n_features_in_:
-            raise ValueError(
-                f"Beklenen özellik sayısı {self.model.n_features_in_}, ancak sağlanan özellik sayısı {X_new.shape[1]}.")
+        # Tahmin sonuçlarını CSV dosyasına yaz
+        results_df = pd.DataFrame(self.results, columns=["predictions"])
+        results_csv_path = "results/predictions.csv"
+        results_df.to_csv(results_csv_path, index=False)
+        print(f"Tahmin sonuçları {results_csv_path} dosyasına kaydedildi.")
 
-        # Tahmin yap
-        predictions = self.model.predict(X_new)
-        return predictions
+        return self.results
+
 
 
