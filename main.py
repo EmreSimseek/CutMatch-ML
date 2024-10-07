@@ -121,7 +121,7 @@ def main():
     trainer.run_training(analysis_data)  # CSV'den yüklenen verilerle eğitimi başlat
 
     X, y = trainer.preprocess_data(analysis_data)  # Veriyi işle
-    trainer.cross_validate(X, y, cv=10)  # Çapraz doğrulamayı çalıştır
+    trainer.cross_validate(X, y, cv=5)  # Çapraz doğrulamayı çalıştır
 
     # Etiketsiz veriler üzerinde tahmin yap
 

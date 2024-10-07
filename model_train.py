@@ -7,13 +7,10 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 from sklearn.model_selection import GridSearchCV
 from sklearn.svm import SVC
-from glass_cut_analysis import  GlassCutAnalysis
-from shape_analyzer import  ShaperAnalysis
 import  numpy as np
-from  utils.file_loader import  load_data
 
+class ModelTrainer:  # ModelTrainer sınıfı, makine öğrenimi modellerinin eğitim, değerlendirme ve tahmin süreçlerini yönetir.
 
-class ModelTrainer:
     def __init__(self, output_dir, model_choice):
         """
         ModelTrainer sınıfı, model eğitim ve değerlendirme işlemleri için kullanılır.
@@ -27,7 +24,7 @@ class ModelTrainer:
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
 
-    @staticmethod
+    @staticmethod # Veriyi işler, özellikler ve hedef değişkeni ayırır.
     def preprocess_data(data):
         """
         Veriyi işler, özellikler ve hedef değişkeni ayırır.
@@ -36,6 +33,9 @@ class ModelTrainer:
         # 'filename' sütununu veri setinden kaldır
         if 'file_name' in data.columns:
             data = data.drop(columns=['file_name'])
+            data = data.drop(columns=['min_freq'])
+            data = data.drop(columns=['max_freq'])
+            data = data.drop(columns=['mean_magnitude_prev'])
 
         # Tüm sayısal sütunları al
         numeric_columns = data.select_dtypes(include=[float, int]).columns.tolist()
@@ -52,15 +52,15 @@ class ModelTrainer:
 
         return X, y
 
-
-
-    @staticmethod
+    @staticmethod # Veriyi eğitim ve test setlerine böler.
     def split_data(X, y, test_size=0.2, random_state=42):
         """
         Veriyi eğitim ve test setlerine böler.
         """
         return train_test_split(X, y, test_size=test_size, random_state=random_state)
 
+    # GridSearchCV ile modelin hiperparametrelerini optimize eder.
+    # En iyi parametreleri belirler ve modeli günceller.
     def tune_model(self, X_train, y_train):
         """
         GridSearchCV ile modelin hiperparametrelerini optimize eder.
@@ -89,6 +89,7 @@ class ModelTrainer:
         self.model = grid_search.best_estimator_
         print(f"En iyi model parametreleri: {grid_search.best_params_}")
 
+    # Seçilen modelle eğitim yapar.
     def train_model(self, X_train, y_train):
         """
         Modeli eğitir. RandomForest veya SVM modeline göre eğitim yapar.
@@ -105,8 +106,7 @@ class ModelTrainer:
         self.model.fit(X_train, y_train)
         print("Model eğitimi tamamlandı.")
 
-
-
+    # Doğruluk, Confusion Matrix ve Classification Report sunar.
     def evaluate_model(self, X_test, y_test):
         """
         Eğitilen modeli test eder ve performansı değerlendirir.
@@ -138,6 +138,7 @@ class ModelTrainer:
 
         return accuracy
 
+    # Modelin özellikler üzerindeki önemini analiz eder.
     def feature_importance(self, X_train, y_train):
         """
         Modelin hangi özelliklere daha çok önem verdiğini analiz eder.
@@ -190,6 +191,7 @@ class ModelTrainer:
         else:
             print("Özellik önemi analizi, yalnızca RandomForest veya SVM için desteklenmektedir.")
 
+    # Veriyi ön işler, böler, modeli eğitir ve değerlendirir.
     def run_training(self, data):
         """
         Model eğitim ve değerlendirme adımlarını çalıştırır.
@@ -204,6 +206,8 @@ class ModelTrainer:
         if X_train.empty or y_train.empty:
             raise ValueError("Eğitim verisi boş. Lütfen verinizi kontrol edin.")
 
+        # Modelin hiperparametrelerini optimize et
+        self.tune_model(X_train, y_train)
         # Modeli eğit
         self.train_model(X_train, y_train)
 
@@ -213,6 +217,7 @@ class ModelTrainer:
         # Modeli değerlendir
         return self.evaluate_model(X_test, y_test)
 
+    # Modeli K-Fold çapraz doğrulama ile değerlendirir.
     def cross_validate(self, X, y, cv=5):
         """
         Modeli K-Fold çapraz doğrulama ile değerlendirir.
@@ -222,6 +227,7 @@ class ModelTrainer:
         print(f"\n{cv}-Fold Cross Validation Accuracy Scores: {scores}")
         print(f"Ortalama Doğruluk: {scores.mean():.2f}")
 
+    # Yeni verilerle tahmin yapar ve sonuçları CSV dosyasına kaydeder.
     def predict(self, features_list):
         """
         Yeni verilerle tahmin yapar ve sonuçları CSV dosyasına kaydeder.
