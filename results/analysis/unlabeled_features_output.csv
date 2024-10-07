@@ -1,0 +1,4 @@
+file_name,mean_distance,std_distance,intersection_area,union_area,iou,angle_std_prev,angle_mean_curr,angle_std_curr,angle_mse,similarity_score,min_freq,max_freq,mean_magnitude_prev,max_magnitude_prev,mean_magnitude_curr,max_magnitude_curr,same_series_value
+veriler-aynı-5.csv,13.788,9.214,18333.158,18884.267,0.971,114.024,-6.494,115.652,4602.170,0.022,-0.500,0.467,1378.194,34731.339,1420.678,34713.983,
+veriler-x-1.csv,4.037,1.548,18463.428,18830.901,0.980,116.837,-15.965,115.084,4538.084,0.022,-0.483,0.483,1375.994,33668.419,1375.309,33659.103,
+veriler-y-6.csv,62.747,56.570,12304.784,19808.467,0.621,111.964,6.087,119.305,21404.069,0.005,-0.500,0.455,1368.791,24910.944,1370.444,25891.263,

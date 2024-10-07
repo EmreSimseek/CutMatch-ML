@@ -1,0 +1,4 @@
+source_file,predictions,prediction_label
+veriler-aynı-5.csv,1,aynı seri
+veriler-x-1.csv,1,aynı seri
+veriler-y-6.csv,0,farklı seri
