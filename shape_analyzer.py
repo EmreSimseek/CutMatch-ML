@@ -1,5 +1,7 @@
 from shapely.geometry import Polygon
 import matplotlib.pyplot as plt
+import numpy as np
+from scipy.fft import fft
 import os
 
 class ShaperAnalysis:
@@ -22,11 +24,9 @@ class ShaperAnalysis:
 
         # Poligonların geçerliliğini kontrol et ve düzelt
         if not prev_polygon.is_valid:
-            print(f"{self.file_name} dosyasındaki eski kesim poligonu geçersiz. Düzeltme yapılıyor.")
             prev_polygon = prev_polygon.buffer(0)  # Küçük topolojik hataları düzeltir
         if not curr_polygon.is_valid:
-            print(f"{self.file_name} dosyasındaki yeni kesim poligonu geçersiz. Düzeltme yapılıyor.")
-            curr_polygon = curr_polygon.buffer(0)
+           curr_polygon = curr_polygon.buffer(0)
 
         # Poligonların geçerliliğini kontrol et
         if not prev_polygon.is_valid or not curr_polygon.is_valid:
@@ -72,10 +72,75 @@ class ShaperAnalysis:
         plt.grid(True)
 
         file_base_name = os.path.splitext(self.file_name)[0]
-        output_dir = os.path.join(self.output_path, f"{file_base_name}_plot.png")  # Yeni dosya adı
+        output_dir = os.path.join(self.output_path,"plots", f"{file_base_name}_plot.png")  # Yeni dosya adı
         # Grafiği belirtilen dosya yoluna kaydet
         plt.savefig(output_dir, bbox_inches='tight')  # Kaydetme işlemi
         print(f"Poligon grafiği kaydedildi: {self.output_path}")
         plt.close()
+
+    def apply_fourier_transform(self):
+        """Prev ve Curr noktaları için Fourier dönüşümü uygular ve görselleştirir."""
+        prev_x = [p[0] for p in self.prev_points]
+        prev_y = [p[1] for p in self.prev_points]
+        curr_x = [c[0] for c in self.curr_points]
+        curr_y = [c[1] for c in self.curr_points]
+
+        # Fourier dönüşümü
+        fft_prev_x = fft(prev_x)
+        fft_prev_y = fft(prev_y)
+        fft_curr_x = fft(curr_x)
+        fft_curr_y = fft(curr_y)
+
+        # Fourier dönüşümünün büyüklük spektrumlarını hesapla
+        magnitude_prev = np.sqrt(np.abs(fft_prev_x) ** 2 + np.abs(fft_prev_y) ** 2)
+        magnitude_curr = np.sqrt(np.abs(fft_curr_x) ** 2 + np.abs(fft_curr_y) ** 2)
+
+        # Frekans ekseni
+        freq = np.fft.fftfreq(len(prev_x))
+        summary = {
+            "min_freq": freq.min(),
+            "max_freq": freq.max(),
+            "mean_magnitude_prev": np.mean(magnitude_prev),
+            "max_magnitude_prev": np.max(magnitude_prev),
+            "mean_magnitude_curr": np.mean(magnitude_curr),
+            "max_magnitude_curr": np.max(magnitude_curr)
+        }
+
+        # Görselleştirme
+        plt.figure(figsize=(12, 6))
+
+        # Prev noktaları için Fourier büyüklük spektrumu
+        plt.subplot(1, 2, 1)
+        plt.plot(freq, magnitude_prev, color='blue')
+        plt.title(f"Prev Noktaları - Fourier Büyüklük Spektrumu {self.file_name}")
+        plt.xlabel("Frekans")
+        plt.ylabel("Büyüklük")
+        plt.grid(True)
+
+        # Klasörü oluştur ve dosyayı kaydet
+        prev_output_folder = os.path.join(self.output_path, "plots2/prev_fft")
+        os.makedirs(prev_output_folder, exist_ok=True)
+        file_base_name = os.path.splitext(self.file_name)[0]
+        output_dir_prev = os.path.join(prev_output_folder, f"{file_base_name}_plot.png")
+        plt.savefig(output_dir_prev, bbox_inches='tight')
+        plt.close()
+
+        # Curr noktaları için Fourier büyüklük spektrumu
+        plt.subplot(1, 2, 2)
+        plt.plot(freq, magnitude_curr, color='red')
+        plt.title(f"Curr Noktaları - Fourier Büyüklük Spektrumu {self.file_name}")
+        plt.xlabel("Frekans")
+        plt.ylabel("Büyüklük")
+        plt.grid(True)
+
+        curr_output_folder = os.path.join(self.output_path, "plots2/curr_fft")
+        os.makedirs(curr_output_folder, exist_ok=True)
+        output_dir_curr = os.path.join(curr_output_folder, f"{file_base_name}_plot.png")
+        plt.savefig(output_dir_curr, bbox_inches='tight')
+        plt.close()
+
+        # Fourier dönüşüm sonuçlarını döndür
+        return summary
+
 
 
