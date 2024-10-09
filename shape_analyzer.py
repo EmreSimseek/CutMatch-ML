@@ -11,8 +11,8 @@ class ShaperAnalysis:
         self.curr_points = curr_points
         self.file_name = file_name
         self.output_path = output_path
-    def analyze_data(self):
 
+    def analyze_data(self):
         # Nokta sayısını kontrol et
         if len(self.prev_points) < 3 or len(self.curr_points) < 3:
             print(f"{self.file_name} dosyasında geçerli nokta yok. Atlanıyor.")
@@ -43,16 +43,11 @@ class ShaperAnalysis:
         # IoU'yu hesaplama
         iou = intersection_area / union_area if union_area > 0 else 0
 
-        # IoU'ya göre karar verme
-        esik_degeri = 0.9
-        series_label = "Aynı seri" if iou > esik_degeri else "Farklı seri"
-
         return {
             "file_name": self.file_name,
             "intersection_area": intersection_area,
             "union_area": union_area,
             "iou": iou,
-            "series_label": series_label,
         }
 
     def plot_polygons(self):
