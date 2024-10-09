@@ -7,7 +7,6 @@ import  time
 import  os
 import pandas as pd
 
-
 def main():
     start_time = time.time()  # Başlangıç zamanını kaydet
 
@@ -22,7 +21,6 @@ def main():
 
     results_manager = ResultsManager() # Sonuçları yönetecek ResultsManager sınıfını başlatıyoruz
     results_manager_2= ResultsManager()  # Etiketsiz veriler için ayrı sonuç yöneticisi
-
 
     output_path = "results/visualizations"  #Görsel çıktılar için dosya yolu
     # Eğitim verileri üzerinde analiz yap
@@ -54,7 +52,7 @@ def main():
 
         # Şekil ve Fourier analizlerini yap
         shaper_analysis = ShaperAnalysis(prev_points, curr_points, file_name, output_path)
-        shaper_result = shaper_analysis.analyze_data() # Şekil analizi - intersection_area, union_area, iou, series_label,
+        shaper_result = shaper_analysis.analyze_data() # Şekil analizi - intersection_area, union_area, iou
         fourier_result = shaper_analysis.apply_fourier_transform() # Fourier analizi
 
         shaper_result["fourier_analysis"] = fourier_result  # Sonuçları birleştir
@@ -124,7 +122,6 @@ def main():
     trainer.cross_validate(X, y, cv=5)  # Çapraz doğrulamayı çalıştır
 
     # Etiketsiz veriler üzerinde tahmin yap
-
     unlabeled_data = pd.read_csv(unlabeled_output_file)
     X_unlabeled, _ = trainer.preprocess_data(unlabeled_data)  # Hedef değişkeni kullanmadığımız için _ ile aldık
 
@@ -140,7 +137,6 @@ def main():
     results_csv_path = "results/predictions_unlabeled.csv"  # Sonuçların kaydedileceği dosya yolu
     results_df.to_csv(results_csv_path, index=False)
     print(f"Tahmin sonuçları {results_csv_path} dosyasına kaydedildi.")
-
 
 
     # Toplam süreyi hesapla
